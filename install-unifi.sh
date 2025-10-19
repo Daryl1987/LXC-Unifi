@@ -123,9 +123,9 @@ fi
 
 # 5. Create the Container
 echo "Creating container $VMID ($CTNAME) on disk storage $ROOTFS_STORAGE..."
-# IMPORTANT FIX: Referencing only the template filename should bypass the storage validation error
-# because the file is already in the global cache.
-pct create "$VMID" "$TEMPLATE_FILE" \
+# FIX: Reverting to the explicit storage path for the template. This ensures Proxmox can find the file
+# that was downloaded in Step 4, while still using the correct ROOTFS_STORAGE for the disk.
+pct create "$VMID" "$TEMPLATE_CACHE_STORAGE:vztmpl/$TEMPLATE_FILE" \
     --hostname "$CTNAME" \
     --cores "$CORE_COUNT" \
     --memory "$RAM_MB" \
