@@ -37,7 +37,7 @@ DISK_SIZE_GB=8           # Root disk size in GB
 
 # Network Configuration (REQUIRED for static IP)
 NET_BR="vmbr0"           # Network bridge (usually vmbr0)
-NET_IP="10.150.0.150/24" # Static IP address with CIDR (e.g., 10.150.0.150/24)
+NET_IP="10.150.0.50/24" # Static IP address with CIDR (e.g., 10.150.0.150/24)
 NET_GW="10.150.0.1"     # Gateway IP address
 DNS_SERVERS="10.150.0.1 1.1.1.1 8.8.8.8" # DNS servers (space-separated)
 
