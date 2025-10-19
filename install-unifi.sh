@@ -208,6 +208,15 @@ else
     pct exec "$VMID" -- apt update -y
     pct exec "$VMID" -- apt install -y unifi
 
+    # NEW Step 4.5: Configure Firewall (UFW) to open Unifi ports
+    echo "Configuring firewall (UFW) to allow Unifi ports..."
+    pct exec "$VMID" -- apt install -y ufw
+    pct exec "$VMID" -- ufw allow 8080/tcp # Device/Controller Communication
+    pct exec "$VMID" -- ufw allow 8443/tcp # Web Interface/API
+    pct exec "$VMID" -- ufw allow 3478/udp # STUN
+    pct exec "$VMID" -- ufw allow 10001/udp # Inform/Discovery 
+    pct exec "$VMID" -- bash -c 'echo "y" | ufw enable'
+    
     # Step 5: Clean up
     pct exec "$VMID" -- apt autoremove -y
 fi
