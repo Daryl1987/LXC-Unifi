@@ -167,6 +167,21 @@ else
     pct exec "$VMID" -- apt update -y
     pct exec "$VMID" -- apt install -y openjdk-17-jdk curl wget gnupg apt-transport-https dirmngr
 
+    # Step 1.5: Install libssl1.1 dependency from Debian Bullseye (required for MongoDB 5.0 on Debian 12)
+    echo "Installing required dependency libssl1.1 from Bullseye repository..."
+    # 1.5a. Add Bullseye repo
+    pct exec "$VMID" -- bash -c 'echo "deb http://ftp.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye.list'
+    
+    # 1.5b. Update and install libssl1.1 (allowing downgrades for this specific package)
+    pct exec "$VMID" -- apt update -y
+    pct exec "$VMID" -- apt install -y libssl1.1/bullseye
+    
+    # 1.5c. Remove Bullseye repo to prevent conflicts later
+    pct exec "$VMID" -- rm /etc/apt/sources.list.d/bullseye.list
+    
+    # 1.5d. Update again to clean up the temporary source
+    pct exec "$VMID" -- apt update -y
+    
     # Step 2: Add and Install MongoDB Server 5.0 (Required Unifi Dependency)
     echo "Adding MongoDB 5.0 repository and installing server..."
     # 2a. Download MongoDB 5.0 GPG key and store in keyrings location
