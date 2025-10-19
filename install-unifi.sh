@@ -18,13 +18,14 @@
 VMID=901
 
 # Container Hostname
-CTNAME="Unifi-Server"
+CTNAME="Unif-Server"
 
 # Storage ID for the container rootfs and template cache (e.g., local, local-lvm)
+# IMPORTANT: This will be dynamically checked. If it fails validation for
+# 'Container Templates' content, the script will try to find an alternative.
 STORAGE="local-zfs"
 
 # Template to use (Check 'pveam available' for options).
-# We will use Debian 12 Standard as a default.
 TEMPLATE="debian-12-standard"
 TEMPLATE_FILE="debian-12-standard_12.5-1_amd64.tar.zst" # Specific file name for template
 
@@ -38,13 +39,19 @@ DISK_SIZE_GB=8           # Root disk size in GB
 NET_BR="vmbr0"           # Network bridge (usually vmbr0)
 NET_IP="10.150.0.45/24" # Static IP address with CIDR (e.g., 192.168.1.150/24)
 NET_GW="10.150.0.1"     # Gateway IP address
-DNS_SERVERS="10.150.0.1 1.1.1.1" # DNS servers (space-separated)
+DNS_SERVERS="10.150.0.1 8.8.8.8" # DNS servers (space-separated)
 
 # Root Password for the container (will be set during creation)
 # NOTE: Highly recommended to change this immediately after creation.
 ROOT_PASSWORD="MySecurePassword123"
 
 # --- USER CONFIGURATION END ---
+
+# Function to find storage that allows Container Templates (vztmpl)
+find_template_storage() {
+    # Filters pvesm status output for storage IDs that contain 'vztmpl' in the 'Content' column
+    pvesm status -content vztmpl | awk 'NR>1 {print $1}' | head -n 1
+}
 
 echo "--- Proxmox LXC Deployment Script Started ---"
 echo "Container ID: $VMID"
@@ -56,14 +63,41 @@ if pct status "$VMID" &> /dev/null; then
     exit 1
 fi
 
-# 2. Check and Download Template
-TEMPLATE_PATH="/var/lib/vz/template/cache/current/$TEMPLATE_FILE"
-if [ ! -f "$TEMPLATE_PATH" ]; then
-    echo "Template $TEMPLATE_FILE not found. Downloading..."
-    # 'pveam available' shows full template names for 'pveam download'
+# 2. Validate and/or Select Storage for Template Download
+echo "Validating template storage..."
+if ! pvesm status -storage "$STORAGE" | grep -q "vztmpl"; then
+    echo "WARNING: Configured storage '$STORAGE' does not support 'Container Templates'."
+    NEW_STORAGE=$(find_template_storage)
+    if [ -n "$NEW_STORAGE" ]; then
+        echo "INFO: Falling back to suitable storage: '$NEW_STORAGE' for template download."
+        STORAGE="$NEW_STORAGE"
+    else
+        echo "CRITICAL ERROR: No storage pool found that is configured to hold Container Templates (vztmpl)."
+        echo "Please check your storage settings in the Proxmox UI."
+        exit 1
+    fi
+else
+    echo "INFO: Using configured storage '$STORAGE' for template download."
+fi
+
+
+# 3. Check and Download Template
+TEMPLATE_DOWNLOAD_PATH="/var/lib/vz/template/cache/$TEMPLATE_FILE"
+if [ ! -f "$TEMPLATE_DOWNLOAD_PATH" ]; then
+    echo "Template $TEMPLATE_FILE not found. Downloading to storage '$STORAGE'..."
+    
+    # We use TEMPLATE_FILE here which is the full filename
     pveam download "$STORAGE" "$TEMPLATE_FILE"
+    
     if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to download template. Exiting."
+        echo "--------------------------------------------------------"
+        echo "CRITICAL ERROR: Failed to download template using pveam."
+        echo "Template download failed even after storage validation."
+        echo "Possible reasons:"
+        echo "1. Network issue: Your Proxmox host cannot reach the internet/repositories."
+        echo "   (Try running 'ping 8.8.8.8' on the host console.)"
+        echo "2. Storage capacity: Storage '$STORAGE' is full."
+        echo "--------------------------------------------------------"
         exit 1
     fi
     echo "Template downloaded successfully."
@@ -71,8 +105,9 @@ else
     echo "Template $TEMPLATE_FILE already exists."
 fi
 
-# 3. Create the Container
+# 4. Create the Container
 echo "Creating container $VMID ($CTNAME)..."
+# We must use the original STORAGE variable here for the rootfs disk placement!
 pct create "$VMID" "$STORAGE:vztmpl/$TEMPLATE_FILE" \
     --hostname "$CTNAME" \
     --cores "$CORE_COUNT" \
@@ -89,13 +124,13 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 4. Set Network Configuration
+# 5. Set Network Configuration
 echo "Setting static network configuration..."
 pct set "$VMID" \
     --net0 "name=eth0,bridge=$NET_BR,ip=$NET_IP,gw=$NET_GW" \
     --nameserver "$DNS_SERVERS"
 
-# 5. Set Additional Options (Autostart and Security)
+# 6. Set Additional Options (Autostart and Security)
 echo "Setting autostart, CPU limits, and security features..."
 pct set "$VMID" \
     --onboot 1 \
@@ -103,11 +138,11 @@ pct set "$VMID" \
     --features nesting=1,keyctl=1 \
     --sshkeys /root/.ssh/id_rsa.pub # Optional: Adjust to your key path if needed
 
-# 6. Start the Container
+# 7. Start the Container
 echo "Starting container $VMID..."
 pct start "$VMID"
 
-# 7. Final Status Check
+# 8. Final Status Check
 sleep 5
 STATUS=$(pct status "$VMID")
 IP=$(pct exec "$VMID" ip a | grep 'inet ' | awk '{print $2}' | head -n 1 | cut -d/ -f1)
