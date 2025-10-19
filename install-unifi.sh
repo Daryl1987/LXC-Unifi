@@ -171,4 +171,3 @@ echo "Assigned IP: $NET_IP (Attempting to verify: $IP)"
 echo "To access the container via console, run: pct enter $VMID"
 echo "To check logs, run: pct log $VMID"
 echo "--------------------------------------------------------"
-
