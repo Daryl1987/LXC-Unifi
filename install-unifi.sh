@@ -121,9 +121,9 @@ fi
 
 # 5. Create the Container
 echo "Creating container $VMID ($CTNAME) on disk storage $ROOTFS_STORAGE..."
-# CRITICAL FIX: Since 'pveam scan' failed, and storage path syntax conflicts with
-# rootfs storage, we must use the absolute file system path to the template.
-# This forces 'pct create' to use the downloaded file directly.
+# CRITICAL FIX: We use the absolute file system path to the template to bypass 
+# internal Proxmox storage indexing issues (since 'pveam scan' is unavailable).
+# This is the most reliable way to create the container when storage locations are split.
 pct create "$VMID" "$TEMPLATE_DOWNLOAD_PATH" \
     --hostname "$CTNAME" \
     --cores "$CORE_COUNT" \
@@ -171,3 +171,4 @@ echo "Assigned IP: $NET_IP (Attempting to verify: $IP)"
 echo "To access the container via console, run: pct enter $VMID"
 echo "To check logs, run: pct log $VMID"
 echo "--------------------------------------------------------"
+
