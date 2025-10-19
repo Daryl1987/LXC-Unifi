@@ -117,15 +117,18 @@ if [ ! -f "$TEMPLATE_DOWNLOAD_PATH" ]; then
         exit 1
     fi
     echo "Template downloaded successfully."
-else
-    echo "Template $TEMPLATE_FILE already exists."
 fi
+
+# CRITICAL FIX: Force Proxmox to refresh its template cache listing.
+# This ensures that 'pct create' can correctly link the short template name (debian-12-standard)
+# to the physical file (.tar.zst) that now exists on the 'local' storage.
+echo "INFO: Refreshing template cache on '$TEMPLATE_CACHE_STORAGE'..."
+pveam scan "$TEMPLATE_CACHE_STORAGE"
 
 # 5. Create the Container
 echo "Creating container $VMID ($CTNAME) on disk storage $ROOTFS_STORAGE..."
-# NEW FIX: Use the TEMPLATE_CACHE_STORAGE ID and the TEMPLATE short name (e.g., local:debian-12-standard).
-# This is a common pattern for specifying cached templates and avoids the complexity of the full file name path
-# which seems to be causing the 'can't find file' error when combined with the separate rootfs storage.
+# Use the TEMPLATE_CACHE_STORAGE ID and the TEMPLATE short name (e.g., local:debian-12-standard).
+# This syntax is required and should work now that the cache has been scanned.
 pct create "$VMID" "$TEMPLATE_CACHE_STORAGE:$TEMPLATE" \
     --hostname "$CTNAME" \
     --cores "$CORE_COUNT" \
