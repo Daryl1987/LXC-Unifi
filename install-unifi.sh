@@ -123,9 +123,10 @@ fi
 
 # 5. Create the Container
 echo "Creating container $VMID ($CTNAME) on disk storage $ROOTFS_STORAGE..."
-# FIX: Reverting to the explicit storage path for the template. This ensures Proxmox can find the file
-# that was downloaded in Step 4, while still using the correct ROOTFS_STORAGE for the disk.
-pct create "$VMID" "$TEMPLATE_CACHE_STORAGE:vztmpl/$TEMPLATE_FILE" \
+# NEW FIX: Use the TEMPLATE_CACHE_STORAGE ID and the TEMPLATE short name (e.g., local:debian-12-standard).
+# This is a common pattern for specifying cached templates and avoids the complexity of the full file name path
+# which seems to be causing the 'can't find file' error when combined with the separate rootfs storage.
+pct create "$VMID" "$TEMPLATE_CACHE_STORAGE:$TEMPLATE" \
     --hostname "$CTNAME" \
     --cores "$CORE_COUNT" \
     --memory "$RAM_MB" \
