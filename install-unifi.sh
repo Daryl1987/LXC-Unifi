@@ -123,8 +123,9 @@ fi
 
 # 5. Create the Container
 echo "Creating container $VMID ($CTNAME) on disk storage $ROOTFS_STORAGE..."
-# Use ROOTFS_STORAGE for the volume, and TEMPLATE_CACHE_STORAGE for the source template path
-pct create "$VMID" "$TEMPLATE_CACHE_STORAGE:vztmpl/$TEMPLATE_FILE" \
+# IMPORTANT FIX: Referencing only the template filename should bypass the storage validation error
+# because the file is already in the global cache.
+pct create "$VMID" "$TEMPLATE_FILE" \
     --hostname "$CTNAME" \
     --cores "$CORE_COUNT" \
     --memory "$RAM_MB" \
