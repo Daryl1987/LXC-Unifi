@@ -23,7 +23,7 @@ CTNAME="Unif-Server"
 # Storage ID for the container rootfs and template cache (e.g., local, local-lvm)
 # IMPORTANT: This will be dynamically checked. If it fails validation for
 # 'Container Templates' content, the script will try to find an alternative.
-STORAGE="local-zfs"
+STORAGE="local"
 
 # Template to use (Check 'pveam available' for options).
 TEMPLATE="debian-12-standard"
