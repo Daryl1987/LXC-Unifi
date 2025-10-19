@@ -33,7 +33,7 @@ TEMPLATE_FILE="debian-12-standard_12.12-1_amd64.tar.zst" # Specific file name fo
 
 # Resource Configuration
 CORE_COUNT=2             # Number of CPU Cores
-RAM_MB=2048              # Increased Memory for Unifi/Java (RECOMMENDED)
+RAM_MB=4096              # Increased Memory for Unifi/Java (RECOMMENDED: 4GB for better performance)
 SWAP_MB=512              # Swap space in MB
 DISK_SIZE_GB=16          # Increased Disk Size for Unifi Database (RECOMMENDED)
 
@@ -207,6 +207,13 @@ else
     # Run update again to recognize the Unifi repository
     pct exec "$VMID" -- apt update -y
     pct exec "$VMID" -- apt install -y unifi
+
+    # NEW Step 4.1: Configure Java Memory Limits for Unifi (Prevent crashes)
+    echo "Configuring Unifi Java memory limits (3072MB max) and restarting service..."
+    # Set initial heap size to 2GB and max to 3GB (leaving 1GB for OS/MongoDB)
+    pct exec "$VMID" -- bash -c 'sed -i "s/^\(JAVA_INIT_HEAP_SIZE=\).*$/JAVA_INIT_HEAP_SIZE=2048/" /etc/default/unifi'
+    pct exec "$VMID" -- bash -c 'sed -i "s/^\(JAVA_MAX_HEAP_SIZE=\).*$/JAVA_MAX_HEAP_SIZE=3072/" /etc/default/unifi'
+    pct exec "$VMID" -- systemctl restart unifi
 
     # NEW Step 4.5: Configure Firewall (UFW) to open Unifi ports
     echo "Configuring firewall (UFW) to allow Unifi ports..."
