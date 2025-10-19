@@ -163,24 +163,37 @@ if [ -z "$IP" ]; then
 else
     echo "Container has IP: $IP. Proceeding with installation."
 
-    # Step 1: Install required packages (curl, Java 17)
+    # Step 1: Install required packages (curl, Java 17, and dirmngr for GPG)
     pct exec "$VMID" -- apt update -y
-    pct exec "$VMID" -- apt install -y openjdk-17-jdk curl wget gnupg apt-transport-https
+    pct exec "$VMID" -- apt install -y openjdk-17-jdk curl wget gnupg apt-transport-https dirmngr
 
-    # Step 2: Add Unifi GPG Key and Repository (Modern Debian 12 Method)
+    # Step 2: Add and Install MongoDB Server 5.0 (Required Unifi Dependency)
+    echo "Adding MongoDB 5.0 repository and installing server..."
+    # 2a. Download MongoDB 5.0 GPG key and store in keyrings location
+    pct exec "$VMID" -- bash -c 'curl -fsSL https://www.mongodb.org/static/pgp/server-5.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-archive-keyring.gpg'
+    
+    # 2b. Add MongoDB 5.0 source (using 'bullseye' path which works for 5.0 on Debian 12)
+    pct exec "$VMID" -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] http://repo.mongodb.org/apt/debian bullseye/mongodb-org/5.0 main" | tee /etc/apt/sources.list.d/mongodb-org-5.0.list'
+    
+    # 2c. Update package list and install the MongoDB server
+    pct exec "$VMID" -- apt update -y
+    pct exec "$VMID" -- apt install -y mongodb-org-server
+
+    # Step 3: Add Unifi GPG Key and Repository
     echo "Adding Unifi repository key and source using modern, secure method..."
-    # 2a. Download GPG key and store in the standard keyrings location
+    # 3a. Download GPG key and store in the standard keyrings location
     pct exec "$VMID" -- bash -c 'curl -fsSL https://dl.ui.com/unifi/unifi-repo.gpg | gpg --dearmor -o /usr/share/keyrings/unifi-archive-keyring.gpg'
     
-    # 2b. Add the source line, explicitly using 'signed-by' and the distribution 'ubiquiti'
+    # 3b. Add the source line, explicitly using 'signed-by' and the distribution 'ubiquiti'
     pct exec "$VMID" -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/unifi-archive-keyring.gpg] https://www.ui.com/downloads/unifi/debian stable ubiquiti" | tee /etc/apt/sources.list.d/unifi.list'
 
-    # Step 3: Final Update and Install Unifi
+    # Step 4: Final Update and Install Unifi
     echo "Installing Unifi package..."
+    # Run update again to recognize the Unifi repository
     pct exec "$VMID" -- apt update -y
     pct exec "$VMID" -- apt install -y unifi
 
-    # Step 4: Clean up
+    # Step 5: Clean up
     pct exec "$VMID" -- apt autoremove -y
 fi
 
