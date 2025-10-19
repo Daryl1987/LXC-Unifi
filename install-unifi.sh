@@ -21,7 +21,7 @@ VMID=901
 CTNAME="Unifi-Server"
 
 # Storage ID for the container rootfs and template cache (e.g., local, local-lvm)
-STORAGE="local-lvm"
+STORAGE="local-zfs"
 
 # Template to use (Check 'pveam available' for options).
 # We will use Debian 12 Standard as a default.
