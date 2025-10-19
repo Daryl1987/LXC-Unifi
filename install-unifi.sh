@@ -119,17 +119,12 @@ if [ ! -f "$TEMPLATE_DOWNLOAD_PATH" ]; then
     echo "Template downloaded successfully."
 fi
 
-# CRITICAL FIX: Force Proxmox to refresh its template cache listing.
-# This ensures that 'pct create' can correctly link the short template name (debian-12-standard)
-# to the physical file (.tar.zst) that now exists on the 'local' storage.
-echo "INFO: Refreshing template cache on '$TEMPLATE_CACHE_STORAGE'..."
-pveam scan "$TEMPLATE_CACHE_STORAGE"
-
 # 5. Create the Container
 echo "Creating container $VMID ($CTNAME) on disk storage $ROOTFS_STORAGE..."
-# Use the TEMPLATE_CACHE_STORAGE ID and the TEMPLATE short name (e.g., local:debian-12-standard).
-# This syntax is required and should work now that the cache has been scanned.
-pct create "$VMID" "$TEMPLATE_CACHE_STORAGE:$TEMPLATE" \
+# CRITICAL FIX: Since 'pveam scan' failed, and storage path syntax conflicts with
+# rootfs storage, we must use the absolute file system path to the template.
+# This forces 'pct create' to use the downloaded file directly.
+pct create "$VMID" "$TEMPLATE_DOWNLOAD_PATH" \
     --hostname "$CTNAME" \
     --cores "$CORE_COUNT" \
     --memory "$RAM_MB" \
